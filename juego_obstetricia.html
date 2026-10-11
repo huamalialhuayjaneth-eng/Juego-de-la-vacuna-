@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Obstetricia 3D - Carrera de obstáculos</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial,sans-serif;background:#eef5f1;color:#20352e}
+main{max-width:1000px;margin:auto;padding:16px}.head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:clamp(1.35rem,4vw,2rem);margin:0}.sub{margin:4px 0 14px;color:#52675e}
+.stats{display:flex;gap:8px;flex-wrap:wrap}.pill{background:white;border:1px solid #d0ded7;border-radius:999px;padding:7px 12px}
+canvas{width:100%;height:min(60vh,500px);min-height:330px;display:block;border:2px solid #b7cdc2;border-radius:16px;background:#dcebe4;touch-action:manipulation}
+.controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:12px 0}
+button{font:inherit;font-weight:650;padding:10px 15px;border:1px solid #b8cfc3;border-radius:10px;background:white;color:#20352e;cursor:pointer;min-width:48px;min-height:44px}
+button:focus-visible{outline:3px solid #247a5a;outline-offset:2px}button:hover{background:#e3f3e9}
+#message{text-align:center;font-weight:650;min-height:28px;margin:8px 0}
+.note{font-size:.92rem;color:#52675e;text-align:center}.legend{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;font-size:.9rem;margin-top:10px}
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <div><h1>🩺 Obstetricia: carrera de obstáculos</h1><p class="sub">¡Esquiva los materiales y llega a la meta!</p></div>
+    <div class="stats"><span class="pill">❤️ Vidas: <b id="life">3</b></span><span class="pill">⭐ Puntos: <b id="score">0</b></span><span class="pill">🏁 Nivel: <b id="level">1</b></span></div>
+  </div>
+  <canvas id="game" aria-label="Mapa de juego con obstáculos de obstetricia"></canvas>
+  <div class="controls">
+    <button data-move="left" aria-label="Mover a la izquierda">⬅️</button>
+    <button data-move="up" aria-label="Mover hacia arriba">⬆️</button>
+    <button data-move="down" aria-label="Mover hacia abajo">⬇️</button>
+    <button data-move="right" aria-label="Mover a la derecha">➡️</button>
+    <button id="restart">🔄 Reiniciar</button>
+  </div>
+  <div id="message" aria-live="polite">Usa las flechas del teclado o los botones. ¡Alcanza la meta verde!</div>
+  <div class="legend"><span>🔴 Preservativo</span><span>💉 Jeringa</span><span>🩺 Estetoscopio</span><span>🧤 Guantes</span><span>🍼 Biberón</span></div>
+  <p class="note">Juego educativo de práctica. Puedes jugar en computadora o celular; descarga y abre este archivo en tu navegador.</p>
+</main>
+<script>
+(()=>{
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const $=id=>document.getElementById(id);
+let W=900,H=470,dpr=1,life=3,score=0,level=1,ended=false,player={x:0,y:0},obstacles=[];
+const items=['🔴','💉','🩺','🧤','🍼','🩻','🩹'];
+function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);W=Math.max(320,r.width);H=Math.max(330,r.height);canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);if(!player.x)resetPlayer();draw()}
+function resetPlayer(){player={x:W/2,y:H-48}}
+function spawn(){obstacles=[];let n=Math.min(6+level*2,22);for(let i=0;i<n;i++){obstacles.push({x:45+Math.random()*(W-90),y:75+Math.random()*(H-150),emoji:items[i%items.length],size:28+Math.random()*7,vx:(Math.random()-.5)*(1+level*.12),vy:(Math.random()-.5)*.8})}}
+function reset(){life=3;score=0;level=1;ended=false;resetPlayer();spawn();updateStats();$('message').textContent='Usa las flechas del teclado o los botones. ¡Alcanza la meta verde!';draw()}
+function updateStats(){$('life').textContent=life;$('score').textContent=score;$('level').textContent=level}
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ let grad=ctx.createLinearGradient(0,0,0,H);grad.addColorStop(0,'#e7f3ed');grad.addColorStop(1,'#b9d6c8');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ // Mapa en perspectiva con carril
+ ctx.fillStyle='#c7d8c5';ctx.beginPath();ctx.moveTo(W*.25,0);ctx.lineTo(W*.75,0);ctx.lineTo(W*.96,H);ctx.lineTo(W*.04,H);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='rgba(73,105,84,.22)';ctx.lineWidth=1;
+ for(let y=25;y<H;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ for(let x=0;x<W;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(W/2+(x-W/2)*1.6,H);ctx.stroke()}
+ // meta
+ ctx.fillStyle='#277c58';ctx.fillRect(W/2-62,10,124,39);ctx.fillStyle='white';ctx.font='bold 17px system-ui';ctx.textAlign='center';ctx.fillText('🏁 META',W/2,36);
+ obstacles.forEach(o=>{o.x+=o.vx;o.y+=o.vy;if(o.x<28||o.x>W-28)o.vx*=-1;if(o.y<62||o.y>H-85)o.vy*=-1;ctx.font=o.size+'px system-ui';ctx.textAlign='center';ctx.shadowColor='#64796c';ctx.shadowBlur=4;ctx.fillText(o.emoji,o.x,o.y);ctx.shadowBlur=0});
+ // jugador con sombra
+ ctx.fillStyle='rgba(36,67,51,.18)';ctx.beginPath();ctx.ellipse(player.x,player.y+3,18,7,0,0,Math.PI*2);ctx.fill();
+ ctx.font='36px system-ui';ctx.textAlign='center';ctx.fillText('🧑‍⚕️',player.x,player.y);
+ if(ended){ctx.fillStyle='rgba(255,255,255,.88)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#20352e';ctx.font='bold 27px system-ui';ctx.fillText(life<=0?'¡Fin del juego!':'¡Nivel completado!',W/2,H/2-8);ctx.font='16px system-ui';ctx.fillText('Pulsa Reiniciar para jugar otra vez',W/2,H/2+24)}
+}
+function move(dir){if(ended)return;let d=12;if(dir==='left')player.x-=d;if(dir==='right')player.x+=d;if(dir==='up')player.y-=d;if(dir==='down')player.y+=d;player.x=Math.max(22,Math.min(W-22,player.x));player.y=Math.max(55,Math.min(H-24,player.y));
+ for(let i=obstacles.length-1;i>=0;i--){let o=obstacles[i];if(Math.hypot(player.x-o.x,player.y-o.y)<27){life--;score=Math.max(0,score-10);$('message').textContent='¡Cuidado! Chocaste con un material de obstetricia. Intenta esquivarlo.';obstacles.splice(i,1);updateStats();if(life<=0){ended=true;$('message').textContent='Te quedaste sin vidas. Pulsa Reiniciar para volver a jugar.';draw();return}}}
+ if(player.y<53){score+=100;level++;resetPlayer();spawn();updateStats();$('message').textContent='¡Excelente! Pasaste al siguiente nivel: ahora hay más obstáculos.'}
+ draw();
+}
+window.addEventListener('keydown',e=>{const map={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',a:'left',d:'right',w:'up',s:'down'};if(map[e.key]){e.preventDefault();move(map[e.key])}},{passive:false});
+document.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>move(b.dataset.move)));
+$('restart').addEventListener('click',reset);window.addEventListener('resize',resize);resetPlayer();spawn();resize();
+})();
+</script>
+</body></html>
